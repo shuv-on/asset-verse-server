@@ -136,6 +136,15 @@ app.delete('/assets/:id', verifyToken, async (req, res) => {
   res.send(result);
 })
 
+//get asset by id
+app.get('/assets/:id', verifyToken, async (req, res) => {
+  await connectDB();
+  const id = req.params.id;
+  const query = { _id: new ObjectId(id) };
+  const result = await assetsCollection.findOne(query);
+  res.send(result);
+})
+
 
 // Start Server
 app.listen(port, () => {
