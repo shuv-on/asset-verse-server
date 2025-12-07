@@ -26,6 +26,7 @@ const client = new MongoClient(uri, {
 let db;
 let usersCollection;
 let assetsCollection;
+let requestsCollection;
 
 
 async function connectDB() {
@@ -35,6 +36,7 @@ async function connectDB() {
     db = client.db("assetVerse");
     usersCollection = db.collection("users");
     assetsCollection = db.collection("assets");
+    requestsCollection = db.collection("requests");
     console.log("Connected to MongoDB");
   } catch (error) {
     console.error("MongoDB Connection Error:", error);
@@ -161,6 +163,32 @@ app.patch('/assets/:id', verifyToken, async(req, res) =>{
   const result = await assetsCollection.updateOne(filter, updatedDoc);
   res.send(result);
 })
+
+//Request asset
+app.post('/requests', verifyToken, async (req, res) => {
+    await connectDB();
+    const request = req.body;
+    const result = await requestsCollection.insertOne(request);
+    res.send(result);
+});
+//Get public assets
+app.get('/assets-public', async (req, res) => { 
+    await connectDB();
+    const search = req.query.search || "";
+    const filter = req.query.filter || "";
+
+    let query = {
+        productName: { $regex: search, $options: 'i' },
+        productQuantity: { $gt: 0 } 
+    };
+
+    if (filter) {
+        query.productType = filter;
+    }
+
+    const result = await assetsCollection.find(query).toArray();
+    res.send(result);
+});
 
 
 // Start Server
