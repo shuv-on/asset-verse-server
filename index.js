@@ -203,7 +203,7 @@ app.get('/requests', verifyToken, async (req, res) => {
     res.send(result);
 });
 //HR Action
-app.patch('/requests/:id', verifyToken, async (req, res) => {
+/* app.patch('/requests/:id', verifyToken, async (req, res) => {
     await connectDB();
     const id = req.params.id;
     const { status, assetId } = req.body; 
@@ -225,7 +225,7 @@ app.patch('/requests/:id', verifyToken, async (req, res) => {
     }
 
     res.send(result);
-});
+}); */
 
 //Get my rqst
 app.get('/my-requested-assets', verifyToken, async (req, res) => {
