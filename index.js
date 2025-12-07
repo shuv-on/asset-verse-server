@@ -202,6 +202,30 @@ app.get('/requests', verifyToken, async (req, res) => {
     const result = await requestsCollection.find(query).toArray();
     res.send(result);
 });
+//HR Action
+app.patch('/requests/:id', verifyToken, async (req, res) => {
+    await connectDB();
+    const id = req.params.id;
+    const { status, assetId } = req.body; 
+
+    const query = { _id: new ObjectId(id) };
+    const updateDoc = {
+        $set: { status: status }
+    };
+
+    const result = await requestsCollection.updateOne(query, updateDoc);
+
+    
+    if (status === 'approved' && result.modifiedCount > 0) {
+        const assetQuery = { _id: new ObjectId(assetId) };
+        const updateAssetDoc = {
+            $inc: { productQuantity: -1 }
+        };
+        await assetsCollection.updateOne(assetQuery, updateAssetDoc);
+    }
+
+    res.send(result);
+});
 
 
 // Start Server
