@@ -22,9 +22,10 @@ const client = new MongoClient(uri, {
   }
 });
 
-
+// collections
 let db;
 let usersCollection;
+let assetsCollection;
 
 
 async function connectDB() {
@@ -33,6 +34,7 @@ async function connectDB() {
     await client.connect();
     db = client.db("assetVerse");
     usersCollection = db.collection("users");
+    assetsCollection = db.collection("assets");
     console.log("Connected to MongoDB");
   } catch (error) {
     console.error("MongoDB Connection Error:", error);
@@ -55,7 +57,7 @@ const verifyToken = (req, res, next) => {
 }
 
 
-// Root Route
+// Root route
 app.get('/', (req, res) => {
   res.send('AssetVerse server is running');
 })
@@ -95,6 +97,45 @@ app.get('/users/:email', async (req, res) => {
   const result = await usersCollection.findOne(query);
   res.send(result);
 })
+
+//Add asset
+app.post('/assets', verifyToken, async (req, res) => {
+  await connectDB();
+  const asset = req.body;
+  const result = await assetsCollection.insertOne(asset);
+  res.send(result);
+})
+
+//Get asset
+app.get('/assets', verifyToken, async (req, res) => {
+  await connectDB();
+  const email = req.query.email;
+  const search = req.query.search || "";
+  const filter = req.query.filter || "";
+
+  
+  let query = {
+    hrEmail: email,
+    productName: { $regex: search, $options: 'i' } 
+  };
+
+  if (filter) {
+    query.productType = filter;
+  }
+
+  const result = await assetsCollection.find(query).toArray();
+  res.send(result);
+})
+
+//Asset delte
+app.delete('/assets/:id', verifyToken, async (req, res) => {
+  await connectDB();
+  const id = req.params.id;
+  const query = { _id: new ObjectId(id) };
+  const result = await assetsCollection.deleteOne(query);
+  res.send(result);
+})
+
 
 // Start Server
 app.listen(port, () => {
