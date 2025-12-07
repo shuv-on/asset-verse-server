@@ -164,21 +164,14 @@ app.patch('/assets/:id', verifyToken, async(req, res) =>{
   res.send(result);
 })
 
-//Request asset
-app.post('/requests', verifyToken, async (req, res) => {
-    await connectDB();
-    const request = req.body;
-    const result = await requestsCollection.insertOne(request);
-    res.send(result);
-});
-//Get public assets
-app.get('/assets-public', async (req, res) => { 
+//Get available assets
+app.get('/assets-available', verifyToken, async (req, res) => { 
     await connectDB();
     const search = req.query.search || "";
     const filter = req.query.filter || "";
 
     let query = {
-        productName: { $regex: search, $options: 'i' },
+        productName: { $regex: search, $options: 'i' }, 
         productQuantity: { $gt: 0 } 
     };
 
@@ -187,6 +180,26 @@ app.get('/assets-public', async (req, res) => {
     }
 
     const result = await assetsCollection.find(query).toArray();
+    res.send(result);
+});
+
+//Request asset
+app.post('/requests', verifyToken, async (req, res) => {
+    await connectDB();
+    const request = req.body;
+    const result = await requestsCollection.insertOne(request);
+    res.send(result);
+});
+
+
+app.get('/requests', verifyToken, async (req, res) => {
+    await connectDB();
+    const email = req.query.email;
+    let query = {};
+    if (email) {
+        query = { hrEmail: email };
+    }
+    const result = await requestsCollection.find(query).toArray();
     res.send(result);
 });
 
