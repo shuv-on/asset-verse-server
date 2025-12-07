@@ -30,7 +30,7 @@ let usersCollection;
 async function connectDB() {
   if (db) return; 
   try {
-
+    await client.connect();
     db = client.db("assetVerse");
     usersCollection = db.collection("users");
     console.log("Connected to MongoDB");
