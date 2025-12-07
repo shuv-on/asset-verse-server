@@ -227,6 +227,24 @@ app.patch('/requests/:id', verifyToken, async (req, res) => {
     res.send(result);
 });
 
+//Get my rqst
+app.get('/my-requested-assets', verifyToken, async (req, res) => {
+    await connectDB();
+    const email = req.query.email;
+    const query = { requesterEmail: email };
+    const result = await requestsCollection.find(query).toArray();
+    res.send(result);
+});
+
+//Cancel my rqst
+app.delete('/requests/:id', verifyToken, async (req, res) => {
+    await connectDB();
+    const id = req.params.id;
+    const query = { _id: new ObjectId(id) };
+    const result = await requestsCollection.deleteOne(query);
+    res.send(result);
+});
+
 
 // Start Server
 app.listen(port, () => {
