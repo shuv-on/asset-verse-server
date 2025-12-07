@@ -245,6 +245,66 @@ app.delete('/requests/:id', verifyToken, async (req, res) => {
     res.send(result);
 });
 
+//HR affialtes
+app.patch('/requests/:id', verifyToken, async (req, res) => {
+    await connectDB();
+    const id = req.params.id;
+    const { status, assetId, requesterEmail, hrEmail, hrName } = req.body; 
+
+    const query = { _id: new ObjectId(id) };
+    const updateDoc = {
+        $set: { status: status }
+    };
+
+    const result = await requestsCollection.updateOne(query, updateDoc);
+
+   
+    if (status === 'approved' && result.modifiedCount > 0) {
+        
+        const assetQuery = { _id: new ObjectId(assetId) };
+        const updateAssetDoc = { $inc: { productQuantity: -1 } };
+        await assetsCollection.updateOne(assetQuery, updateAssetDoc);
+
+       
+        const hrInfo = await usersCollection.findOne({ email: hrEmail });
+        if (hrInfo) {
+            const userQuery = { email: requesterEmail };
+            const updateUserDoc = {
+                $set: { 
+                    companyName: hrInfo.companyName,
+                    companyLogo: hrInfo.companyLogo,
+                    hrEmail: hrEmail 
+                }
+            };
+            await usersCollection.updateOne(userQuery, updateUserDoc);
+        }
+    }
+
+    res.send(result);
+});
+
+
+//My employess
+app.get('/my-employees', verifyToken, async (req, res) => {
+    await connectDB();
+    const email = req.query.email;
+    
+    
+    const hrUser = await usersCollection.findOne({ email: email });
+    if (!hrUser) {
+        return res.send([]);
+    }
+
+    
+    const query = { 
+        companyName: hrUser.companyName,
+        role: 'employee'
+    };
+    
+    const result = await usersCollection.find(query).toArray();
+    res.send(result);
+});
+
 
 // Start Server
 app.listen(port, () => {
