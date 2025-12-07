@@ -145,6 +145,23 @@ app.get('/assets/:id', verifyToken, async (req, res) => {
   res.send(result);
 })
 
+//Update asset 
+app.patch('/assets/:id', verifyToken, async(req, res) =>{
+  await connectDB();
+  const id = req.params.id;
+  const item = req.body;
+  const filter = {_id: new ObjectId(id)};
+  const updatedDoc = {
+    $set: {
+      productName: item.productName,
+      productType: item.productType,
+      productQuantity: item.productQuantity
+    }
+  }
+  const result = await assetsCollection.updateOne(filter, updatedDoc);
+  res.send(result);
+})
+
 
 // Start Server
 app.listen(port, () => {
