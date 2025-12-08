@@ -405,14 +405,11 @@ app.post('/payments', verifyToken, async (req, res) => {
 app.put('/users/:email', verifyToken, async (req, res) => {
     await connectDB();
     const email = req.params.email;
-    const { name, photoURL } = req.body;
+    const updateData = req.body;
     
     const filter = { email: email };
     const updateDoc = {
-        $set: {
-            name: name,
-            photoURL: photoURL 
-        }
+        $set: updateData
     };
     
     const result = await usersCollection.updateOne(filter, updateDoc);
