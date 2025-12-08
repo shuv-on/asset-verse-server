@@ -249,8 +249,26 @@ app.delete('/requests/:id', verifyToken, async (req, res) => {
 app.patch('/requests/:id', verifyToken, async (req, res) => {
     await connectDB();
     const id = req.params.id;
-    const { status, assetId, requesterEmail, hrEmail, hrName } = req.body; 
+    const { status, assetId, requesterEmail, hrEmail } = req.body;
 
+
+    if (status === 'approved') {
+        const hrUser = await usersCollection.findOne({ email: hrEmail });
+     
+        if (!hrUser) {
+            return res.status(404).send({ message: "HR not found" });
+        }
+
+
+        const currentEmps = hrUser.currentEmployees || 0;
+        const limit = hrUser.packageLimit || 5;
+
+        if (currentEmps >= limit) {
+            return res.send({ message: "limit_reached" }); 
+        }
+    }
+
+    
     const query = { _id: new ObjectId(id) };
     const updateDoc = {
         $set: { status: status }
@@ -258,25 +276,35 @@ app.patch('/requests/:id', verifyToken, async (req, res) => {
 
     const result = await requestsCollection.updateOne(query, updateDoc);
 
-   
+    
     if (status === 'approved' && result.modifiedCount > 0) {
         
+       
         const assetQuery = { _id: new ObjectId(assetId) };
         const updateAssetDoc = { $inc: { productQuantity: -1 } };
         await assetsCollection.updateOne(assetQuery, updateAssetDoc);
 
-       
-        const hrInfo = await usersCollection.findOne({ email: hrEmail });
-        if (hrInfo) {
+        
+        const hrUser = await usersCollection.findOne({ email: hrEmail });
+        
+        if (hrUser) {
+          
             const userQuery = { email: requesterEmail };
             const updateUserDoc = {
                 $set: { 
-                    companyName: hrInfo.companyName,
-                    companyLogo: hrInfo.companyLogo,
-                    hrEmail: hrEmail 
+                    companyName: hrUser.companyName,
+                    companyLogo: hrUser.companyLogo,
+                    role: 'employee', 
+                    hrEmail: hrEmail
                 }
             };
             await usersCollection.updateOne(userQuery, updateUserDoc);
+
+           
+            await usersCollection.updateOne(
+                { email: hrEmail },
+                { $inc: { currentEmployees: 1 } }
+            );
         }
     }
 
