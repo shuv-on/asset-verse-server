@@ -110,7 +110,7 @@ app.post('/assets', verifyToken, async (req, res) => {
 })
 
 //Get asset
-app.get('/assets', verifyToken, async (req, res) => {
+/* app.get('/assets', verifyToken, async (req, res) => {
   await connectDB();
   const email = req.query.email;
   const search = req.query.search || "";
@@ -128,7 +128,7 @@ app.get('/assets', verifyToken, async (req, res) => {
 
   const result = await assetsCollection.find(query).toArray();
   res.send(result);
-})
+}) */
 
 //Asset delte
 app.delete('/assets/:id', verifyToken, async (req, res) => {
