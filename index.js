@@ -416,6 +416,27 @@ app.put('/users/:email', verifyToken, async (req, res) => {
     res.send(result);
 });
 
+//Employee team
+app.get('/my-team', verifyToken, async (req, res) => {
+    await connectDB();
+    const email = req.query.email;
+    const employee = await usersCollection.findOne({ email: email });
+
+   
+    if (!employee || !employee.companyName) {
+        return res.send([]);
+    }
+
+    const query = { 
+        companyName: employee.companyName,
+        role: 'employee',
+        
+    };
+
+    const result = await usersCollection.find(query).toArray();
+    res.send(result);
+});
+
 
 // Start Server
 app.listen(port, () => {
