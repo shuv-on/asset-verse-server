@@ -146,7 +146,7 @@ app.patch('/assets/:id', verifyToken, async(req, res) =>{
 })
 
 //Get available assets
-app.get('/assets-available', verifyToken, async (req, res) => { 
+/* app.get('/assets-available', verifyToken, async (req, res) => { 
     await connectDB();
     const search = req.query.search || "";
     const filter = req.query.filter || "";
@@ -162,6 +162,31 @@ app.get('/assets-available', verifyToken, async (req, res) => {
 
     const result = await assetsCollection.find(query).toArray();
     res.send(result);
+}); */
+app.get('/assets-available', verifyToken, async (req, res) => { 
+    await connectDB();
+    const search = req.query.search || "";
+    const filter = req.query.filter || "";
+    const page = parseInt(req.query.page) || 0;
+    const size = parseInt(req.query.size) || 10;
+
+    let query = {
+        productName: { $regex: search, $options: 'i' }, 
+        productQuantity: { $gt: 0 } 
+    };
+
+    if (filter) {
+        query.productType = filter;
+    }
+
+    const result = await assetsCollection.find(query)
+        .skip(page * size)
+        .limit(size)
+        .toArray();
+        
+    const count = await assetsCollection.countDocuments(query);
+    
+    res.send({ result, count });
 });
 
 //Request asset
