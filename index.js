@@ -146,23 +146,6 @@ app.patch('/assets/:id', verifyToken, async(req, res) =>{
 })
 
 //Get available assets
-/* app.get('/assets-available', verifyToken, async (req, res) => { 
-    await connectDB();
-    const search = req.query.search || "";
-    const filter = req.query.filter || "";
-
-    let query = {
-        productName: { $regex: search, $options: 'i' }, 
-        productQuantity: { $gt: 0 } 
-    };
-
-    if (filter) {
-        query.productType = filter;
-    }
-
-    const result = await assetsCollection.find(query).toArray();
-    res.send(result);
-}); */
 app.get('/assets-available', verifyToken, async (req, res) => { 
     await connectDB();
     const search = req.query.search || "";
@@ -217,13 +200,6 @@ app.get('/requests', verifyToken, async (req, res) => {
 
 
 //Get my rqst
-/* app.get('/my-requested-assets', verifyToken, async (req, res) => {
-    await connectDB();
-    const email = req.query.email;
-    const query = { requesterEmail: email };
-    const result = await requestsCollection.find(query).toArray();
-    res.send(result);
-}); */
 app.get('/my-requested-assets', verifyToken, async (req, res) => {
     await connectDB();
     const email = req.query.email;
