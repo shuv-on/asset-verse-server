@@ -12,6 +12,7 @@ app.use(cors());
 app.use(express.json());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.tk04nnw.mongodb.net/?appName=Cluster0`;
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 
 const client = new MongoClient(uri, {
@@ -363,6 +364,41 @@ app.patch('/users/remove/:id', verifyToken, async (req, res) => {
     }
 
     res.send(result);
+});
+
+//Create payment
+app.post('/create-payment-intent', verifyToken, async (req, res) => {
+    const { price } = req.body;
+    const amount = parseInt(price * 100);
+    
+    console.log(amount, 'amount inside the intent')
+
+    const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: 'usd',
+        payment_method_types: ['card']
+    });
+
+    res.send({
+        clientSecret: paymentIntent.client_secret
+    })
+});
+
+//Save payment
+app.post('/payments', verifyToken, async (req, res) => {
+    await connectDB();
+    const payment = req.body;
+    const paymentResult = await db.collection("payments").insertOne(payment);
+    const query = { email: payment.email };
+    const updateDoc = {
+        $set: { 
+            packageLimit: payment.limit 
+        }
+    };
+    
+    const updateResult = await usersCollection.updateOne(query, updateDoc);
+
+    res.send({ paymentResult, updateResult });
 });
 
 
