@@ -480,6 +480,31 @@ app.get('/employee-monthly-requests', verifyToken, async (req, res) => {
 
     res.send(monthlyRequests);
 });
+//Pagiantion for asset
+app.get('/assets', verifyToken, async (req, res) => {
+    await connectDB();
+    const email = req.query.email;
+    const search = req.query.search || "";
+    const filter = req.query.filter || "";
+    const page = parseInt(req.query.page) || 0; 
+    const size = parseInt(req.query.size) || 10; 
+
+    let query = {
+        hrEmail: email,
+        productName: { $regex: search, $options: 'i' } 
+    };
+
+    if (filter) {
+        query.productType = filter;
+    }
+    const result = await assetsCollection.find(query)
+        .skip(page * size)
+        .limit(size)
+        .toArray();
+    const count = await assetsCollection.countDocuments(query);
+    res.send({ result, count });
+});
+
 
 
 // Start Server
