@@ -334,6 +334,36 @@ app.get('/my-employees', verifyToken, async (req, res) => {
 });
 
 
+//Remove employee
+app.patch('/users/remove/:id', verifyToken, async (req, res) => {
+    await connectDB();
+    const userId = req.params.id; 
+    const { hrEmail } = req.body; 
+
+  
+    const query = { _id: new ObjectId(userId) };
+    const updateDoc = {
+        $set: { 
+            companyName: "",
+            companyLogo: "",
+            hrEmail: ""
+           
+        }
+    };
+
+    const result = await usersCollection.updateOne(query, updateDoc);
+
+    
+    if (result.modifiedCount > 0) {
+        const hrQuery = { email: hrEmail };
+        const updateHrDoc = { $inc: { currentEmployees: -1 } };
+        await usersCollection.updateOne(hrQuery, updateHrDoc);
+    }
+
+    res.send(result);
+});
+
+
 // Start Server
 app.listen(port, () => {
   console.log(`AssetVerse server is running on port: ${port}`);
