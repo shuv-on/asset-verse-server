@@ -109,26 +109,6 @@ app.post('/assets', verifyToken, async (req, res) => {
   res.send(result);
 })
 
-//Get asset
-/* app.get('/assets', verifyToken, async (req, res) => {
-  await connectDB();
-  const email = req.query.email;
-  const search = req.query.search || "";
-  const filter = req.query.filter || "";
-
-  
-  let query = {
-    hrEmail: email,
-    productName: { $regex: search, $options: 'i' } 
-  };
-
-  if (filter) {
-    query.productType = filter;
-  }
-
-  const result = await assetsCollection.find(query).toArray();
-  res.send(result);
-}) */
 
 //Asset delte
 app.delete('/assets/:id', verifyToken, async (req, res) => {
@@ -193,7 +173,7 @@ app.post('/requests', verifyToken, async (req, res) => {
 });
 
 
-app.get('/requests', verifyToken, async (req, res) => {
+/* app.get('/requests', verifyToken, async (req, res) => {
     await connectDB();
     const email = req.query.email;
     let query = {};
@@ -202,31 +182,24 @@ app.get('/requests', verifyToken, async (req, res) => {
     }
     const result = await requestsCollection.find(query).toArray();
     res.send(result);
-});
-//HR Action
-/* app.patch('/requests/:id', verifyToken, async (req, res) => {
-    await connectDB();
-    const id = req.params.id;
-    const { status, assetId } = req.body; 
-
-    const query = { _id: new ObjectId(id) };
-    const updateDoc = {
-        $set: { status: status }
-    };
-
-    const result = await requestsCollection.updateOne(query, updateDoc);
-
-    
-    if (status === 'approved' && result.modifiedCount > 0) {
-        const assetQuery = { _id: new ObjectId(assetId) };
-        const updateAssetDoc = {
-            $inc: { productQuantity: -1 }
-        };
-        await assetsCollection.updateOne(assetQuery, updateAssetDoc);
-    }
-
-    res.send(result);
 }); */
+app.get('/requests', verifyToken, async (req, res) => {
+    await connectDB();
+    const email = req.query.email;
+    const page = parseInt(req.query.page) || 0;
+    const size = parseInt(req.query.size) || 10;
+    let query = {};
+    if (email) {
+        query = { hrEmail: email };
+    }
+    const result = await requestsCollection.find(query)
+        .skip(page * size)
+        .limit(size)
+        .toArray();
+    const count = await requestsCollection.countDocuments(query);
+    res.send({ result, count });
+});
+
 
 //Get my rqst
 app.get('/my-requested-assets', verifyToken, async (req, res) => {
