@@ -251,7 +251,7 @@ app.patch('/requests/:id', verifyToken, async (req, res) => {
     const id = req.params.id;
     const { status, assetId, requesterEmail, hrEmail } = req.body;
 
-
+    
     if (status === 'approved') {
         const hrUser = await usersCollection.findOne({ email: hrEmail });
      
@@ -259,10 +259,14 @@ app.patch('/requests/:id', verifyToken, async (req, res) => {
             return res.status(404).send({ message: "HR not found" });
         }
 
-
         const currentEmps = hrUser.currentEmployees || 0;
-        const limit = hrUser.packageLimit || 5;
+       
+        let limit = 5;
+        if (hrUser.packageLimit !== undefined) {
+            limit = hrUser.packageLimit;
+        }
 
+       
         if (currentEmps >= limit) {
             return res.send({ message: "limit_reached" }); 
         }
@@ -276,7 +280,7 @@ app.patch('/requests/:id', verifyToken, async (req, res) => {
 
     const result = await requestsCollection.updateOne(query, updateDoc);
 
-    
+   
     if (status === 'approved' && result.modifiedCount > 0) {
         
        
@@ -288,7 +292,6 @@ app.patch('/requests/:id', verifyToken, async (req, res) => {
         const hrUser = await usersCollection.findOne({ email: hrEmail });
         
         if (hrUser) {
-          
             const userQuery = { email: requesterEmail };
             const updateUserDoc = {
                 $set: { 
@@ -300,7 +303,6 @@ app.patch('/requests/:id', verifyToken, async (req, res) => {
             };
             await usersCollection.updateOne(userQuery, updateUserDoc);
 
-           
             await usersCollection.updateOne(
                 { email: hrEmail },
                 { $inc: { currentEmployees: 1 } }
