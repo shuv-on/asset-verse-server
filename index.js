@@ -401,6 +401,24 @@ app.post('/payments', verifyToken, async (req, res) => {
     res.send({ paymentResult, updateResult });
 });
 
+//Profile pic updated
+app.put('/users/:email', verifyToken, async (req, res) => {
+    await connectDB();
+    const email = req.params.email;
+    const { name, photoURL } = req.body;
+    
+    const filter = { email: email };
+    const updateDoc = {
+        $set: {
+            name: name,
+            photoURL: photoURL 
+        }
+    };
+    
+    const result = await usersCollection.updateOne(filter, updateDoc);
+    res.send(result);
+});
+
 
 // Start Server
 app.listen(port, () => {
