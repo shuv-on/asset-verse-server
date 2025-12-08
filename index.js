@@ -407,21 +407,28 @@ app.put('/users/:email', verifyToken, async (req, res) => {
 app.get('/my-team', verifyToken, async (req, res) => {
     await connectDB();
     const email = req.query.email;
+    const page = parseInt(req.query.page) || 0;
+    const size = parseInt(req.query.size) || 10;
+
     const employee = await usersCollection.findOne({ email: email });
 
-   
     if (!employee || !employee.companyName) {
-        return res.send([]);
+        return res.send({ result: [], count: 0 });
     }
 
     const query = { 
         companyName: employee.companyName,
         role: 'employee',
-        
     };
 
-    const result = await usersCollection.find(query).toArray();
-    res.send(result);
+    const result = await usersCollection.find(query)
+        .skip(page * size)
+        .limit(size)
+        .toArray();
+        
+    const count = await usersCollection.countDocuments(query);
+    
+    res.send({ result, count });
 });
 //HR Dashboard
 app.get('/hr-pending-requests', verifyToken, async (req, res) => {
