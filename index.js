@@ -217,12 +217,29 @@ app.get('/requests', verifyToken, async (req, res) => {
 
 
 //Get my rqst
-app.get('/my-requested-assets', verifyToken, async (req, res) => {
+/* app.get('/my-requested-assets', verifyToken, async (req, res) => {
     await connectDB();
     const email = req.query.email;
     const query = { requesterEmail: email };
     const result = await requestsCollection.find(query).toArray();
     res.send(result);
+}); */
+app.get('/my-requested-assets', verifyToken, async (req, res) => {
+    await connectDB();
+    const email = req.query.email;
+    const page = parseInt(req.query.page) || 0;
+    const size = parseInt(req.query.size) || 10;
+
+    const query = { requesterEmail: email };
+    
+    const result = await requestsCollection.find(query)
+        .skip(page * size)
+        .limit(size)
+        .toArray();
+        
+    const count = await requestsCollection.countDocuments(query);
+    
+    res.send({ result, count });
 });
 
 //Cancel my rqst
