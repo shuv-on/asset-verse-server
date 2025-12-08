@@ -436,6 +436,50 @@ app.get('/my-team', verifyToken, async (req, res) => {
     const result = await usersCollection.find(query).toArray();
     res.send(result);
 });
+//HR Dashboard
+app.get('/hr-pending-requests', verifyToken, async (req, res) => {
+    await connectDB();
+    const email = req.query.email;
+    const query = { hrEmail: email, status: 'pending' };
+    const result = await requestsCollection.find(query).limit(5).toArray();
+    res.send(result);
+});
+//Stock asset
+app.get('/hr-limited-stock', verifyToken, async (req, res) => {
+    await connectDB();
+    const email = req.query.email;
+    const query = { 
+        hrEmail: email, 
+        productQuantity: { $lt: 10 } 
+    };
+    const result = await assetsCollection.find(query).limit(5).toArray();
+    res.send(result);
+});
+//Employee pending rqst
+app.get('/employee-pending-requests', verifyToken, async (req, res) => {
+    await connectDB();
+    const email = req.query.email;
+    const query = { requesterEmail: email, status: 'pending' };
+    const result = await requestsCollection.find(query).limit(5).toArray();
+    res.send(result);
+});
+//Employee monthly rqst
+app.get('/employee-monthly-requests', verifyToken, async (req, res) => {
+    await connectDB();
+    const email = req.query.email;
+    const date = new Date();
+    const currentMonth = date.getMonth() + 1;
+   
+    
+    const query = { requesterEmail: email };
+    const allRequests = await requestsCollection.find(query).toArray();
+    const monthlyRequests = allRequests.filter(req => {
+        const reqDate = new Date(req.requestDate);
+        return (reqDate.getMonth() + 1) === currentMonth;
+    });
+
+    res.send(monthlyRequests);
+});
 
 
 // Start Server
