@@ -192,11 +192,25 @@ app.get('/assets-available', verifyToken, async (req, res) => {
 });
 
 //Request asset
-app.post('/requests', verifyToken, async (req, res) => {
+app.get('/requests', verifyToken, async (req, res) => {
     await connectDB();
-    const request = req.body;
-    const result = await requestsCollection.insertOne(request);
-    res.send(result);
+    const email = req.query.email;
+    const page = parseInt(req.query.page) || 0;
+    const size = parseInt(req.query.size) || 10;
+
+    let query = {};
+    if (email) {
+        query = { hrEmail: email };
+    }
+
+    const result = await requestsCollection.find(query)
+        .sort({ _id: -1 })
+        .skip(page * size)
+        .limit(size)
+        .toArray();
+
+    const count = await requestsCollection.countDocuments(query);
+    res.send({ result, count });
 });
 
 
