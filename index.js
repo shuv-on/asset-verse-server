@@ -565,6 +565,30 @@ app.get('/hr-stats', verifyToken, async (req, res) => {
 
     res.send(pieData);
 });
+//top rqst
+app.get('/hr-top-requests', verifyToken, async (req, res) => {
+    await connectDB();
+    const email = req.query.email;
+
+    const result = await requestsCollection.aggregate([
+        { $match: { hrEmail: email } }, 
+        { 
+            $group: { 
+                _id: "$productName", 
+                count: { $sum: 1 }   
+            } 
+        },
+        { $sort: { count: -1 } },    
+        { $limit: 5 }               
+    ]).toArray();
+
+    const formattedData = result.map(item => ({
+        name: item._id,
+        count: item.count
+    }));
+
+    res.send(formattedData);
+});
 
 // Start Server
 app.listen(port, () => {
