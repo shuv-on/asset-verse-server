@@ -543,6 +543,29 @@ app.get('/assets', verifyToken, async (req, res) => {
     res.send({ result, count });
 });
 
+//pie charts
+app.get('/hr-stats', verifyToken, async (req, res) => {
+    await connectDB();
+    const email = req.query.email;
+    const returnableCount = await assetsCollection.countDocuments({ 
+        hrEmail: email, 
+        productType: 'Returnable' 
+    });
+
+    const nonReturnableCount = await assetsCollection.countDocuments({ 
+        hrEmail: email, 
+        productType: 'Non-returnable' 
+    });
+
+   
+    const pieData = [
+        { name: 'Returnable', value: returnableCount },
+        { name: 'Non-returnable', value: nonReturnableCount }
+    ];
+
+    res.send(pieData);
+});
+
 // Start Server
 app.listen(port, () => {
   console.log(`AssetVerse server is running on port: ${port}`);
