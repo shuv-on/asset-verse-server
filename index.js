@@ -120,13 +120,32 @@ app.delete('/assets/:id', verifyToken, async (req, res) => {
 })
 
 //get asset by id
-app.get('/assets/:id', verifyToken, async (req, res) => {
-  await connectDB();
-  const id = req.params.id;
-  const query = { _id: new ObjectId(id) };
-  const result = await assetsCollection.findOne(query);
-  res.send(result);
-})
+app.get('/assets', verifyToken, async (req, res) => {
+    await connectDB();
+    const email = req.query.email;
+    const search = req.query.search || "";
+    const filter = req.query.filter || "";
+    const page = parseInt(req.query.page) || 0; 
+    const size = parseInt(req.query.size) || 10; 
+
+    let query = {
+        hrEmail: email,
+        productName: { $regex: search, $options: 'i' } 
+    };
+
+    if (filter) {
+        query.productType = filter;
+    }
+
+    const result = await assetsCollection.find(query)
+        .sort({ _id: -1 }) 
+        .skip(page * size)
+        .limit(size)
+        .toArray();
+        
+    const count = await assetsCollection.countDocuments(query);
+    res.send({ result, count });
+});
 
 //Update asset 
 app.patch('/assets/:id', verifyToken, async(req, res) =>{
