@@ -376,15 +376,15 @@ app.post('/payments', verifyToken, async (req, res) => {
     await connectDB();
     const payment = req.body;
     const paymentResult = await db.collection("payments").insertOne(payment);
+
     const query = { email: payment.email };
+    
     const updateDoc = {
-        $set: { 
+        $inc: { 
             packageLimit: payment.limit 
         }
     };
-    
     const updateResult = await usersCollection.updateOne(query, updateDoc);
-
     res.send({ paymentResult, updateResult });
 });
 
