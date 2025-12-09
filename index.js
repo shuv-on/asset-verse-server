@@ -261,7 +261,7 @@ app.delete('/requests/:id', verifyToken, async (req, res) => {
 });
 
 //HR affialtes
-app.patch('/requests/:id', verifyToken, async (req, res) => {
+/* app.patch('/requests/:id', verifyToken, async (req, res) => {
     await connectDB();
     const id = req.params.id;
     const { status, assetId, requesterEmail, hrEmail } = req.body;
@@ -326,8 +326,74 @@ app.patch('/requests/:id', verifyToken, async (req, res) => {
     }
 
     res.send(result);
-});
+}); */
 
+app.patch('/requests/:id', verifyToken, async (req, res) => {
+    await connectDB();
+    const id = req.params.id;
+    const { status, assetId, requesterEmail, hrEmail } = req.body;
+
+    if (status === 'approved') {
+        const hrUser = await usersCollection.findOne({ email: hrEmail });
+
+        if (!hrUser) {
+            return res.status(404).send({ message: "HR not found" });
+        }
+
+        const currentEmps = hrUser.currentEmployees || 0;
+
+        let limit = 5;
+        if (hrUser.packageLimit !== undefined) {
+            limit = hrUser.packageLimit;
+        }
+
+        if (currentEmps >= limit) {
+            return res.send({ message: "limit_reached" });
+        }
+    }
+
+    const query = { _id: new ObjectId(id) };
+    const updateDoc = {
+        $set: { status: status }
+    };
+
+    const result = await requestsCollection.updateOne(query, updateDoc);
+
+    if (status === 'approved' && result.modifiedCount > 0) {
+        const assetQuery = { _id: new ObjectId(assetId) };
+        const currentAsset = await assetsCollection.findOne(assetQuery);
+        if (currentAsset && currentAsset.productQuantity <= 0) {
+            
+            await requestsCollection.updateOne(query, { $set: { status: 'pending' } });
+            return res.status(400).send({ message: 'Asset quantity is already 0 or less. Cannot approve.' });
+        }
+
+        const updateAssetDoc = { $inc: { productQuantity: -1 } };
+        await assetsCollection.updateOne(assetQuery, updateAssetDoc);
+
+        const hrUser = await usersCollection.findOne({ email: hrEmail });
+
+        if (hrUser) {
+            const userQuery = { email: requesterEmail };
+            const updateUserDoc = {
+                $set: {
+                    companyName: hrUser.companyName,
+                    companyLogo: hrUser.companyLogo,
+                    role: 'employee',
+                    hrEmail: hrEmail
+                }
+            };
+            await usersCollection.updateOne(userQuery, updateUserDoc);
+
+            await usersCollection.updateOne(
+                { email: hrEmail },
+                { $inc: { currentEmployees: 1 } }
+            );
+        }
+    }
+
+    res.send(result);
+});
 
 //My employess
 app.get('/my-employees', verifyToken, async (req, res) => {
