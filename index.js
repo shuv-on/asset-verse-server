@@ -297,22 +297,27 @@ app.patch('/requests/:id', verifyToken, async (req, res) => {
 
    
     if (status === 'approved' && result.modifiedCount > 0) {
-        
-       
         const assetQuery = { _id: new ObjectId(assetId) };
+        const currentAsset = await assetsCollection.findOne(assetQuery);
+        if (currentAsset && currentAsset.productQuantity <= 0) {
+            
+            await requestsCollection.updateOne(query, { $set: { status: 'pending' } });
+            return res.status(400).send({ message: 'Asset quantity is already 0 or less. Cannot approve.' });
+        }
+
+        
         const updateAssetDoc = { $inc: { productQuantity: -1 } };
         await assetsCollection.updateOne(assetQuery, updateAssetDoc);
 
-        
         const hrUser = await usersCollection.findOne({ email: hrEmail });
-        
+
         if (hrUser) {
             const userQuery = { email: requesterEmail };
             const updateUserDoc = {
-                $set: { 
+                $set: {
                     companyName: hrUser.companyName,
                     companyLogo: hrUser.companyLogo,
-                    role: 'employee', 
+                    role: 'employee',
                     hrEmail: hrEmail
                 }
             };
