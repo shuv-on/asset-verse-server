@@ -144,62 +144,21 @@ app.get('/assets', verifyToken, async (req, res) => {
 });
 
 //Update asset
-app.patch('/requests/:id', verifyToken, async (req, res) => {
-    await connectDB();
-    const id = req.params.id;
-    const { status, assetId, requesterEmail, hrEmail } = req.body;
-
-    if (status === 'approved') {
-        const hrUser = await usersCollection.findOne({ email: hrEmail });
-        if (!hrUser) return res.status(404).send({ message: "HR not found" });
-
-        const currentEmps = hrUser.currentEmployees || 0;
-        let limit = 5;
-        if (hrUser.packageLimit !== undefined) limit = hrUser.packageLimit;
-
-        if (currentEmps >= limit) {
-            return res.send({ message: "limit_reached" }); 
-        }
+app.patch('/assets/:id', verifyToken, async(req, res) =>{
+  await connectDB();
+  const id = req.params.id;
+  const item = req.body;
+  const filter = {_id: new ObjectId(id)};
+  const updatedDoc = {
+    $set: {
+      productName: item.productName,
+      productType: item.productType,
+      productQuantity: item.productQuantity
     }
-
-    const query = { _id: new ObjectId(id) };
-    const updateDoc = { $set: { status: status } };
-    const result = await requestsCollection.updateOne(query, updateDoc);
-
-    if (result.modifiedCount > 0) {
-        
-       
-        if (status === 'approved') {
-            const assetQuery = { _id: new ObjectId(assetId) };
-            const updateAssetDoc = { $inc: { productQuantity: -1 } }; 
-            await assetsCollection.updateOne(assetQuery, updateAssetDoc);
-
-            const hrUser = await usersCollection.findOne({ email: hrEmail });
-            if (hrUser) {
-                const userQuery = { email: requesterEmail };
-                const updateUserDoc = {
-                    $set: { 
-                        companyName: hrUser.companyName,
-                        companyLogo: hrUser.companyLogo,
-                        role: 'employee', 
-                        hrEmail: hrEmail
-                    }
-                };
-                await usersCollection.updateOne(userQuery, updateUserDoc);
-                await usersCollection.updateOne({ email: hrEmail }, { $inc: { currentEmployees: 1 } });
-            }
-        }
-
-        
-        if (status === 'returned') {
-            const assetQuery = { _id: new ObjectId(assetId) };
-            const updateAssetDoc = { $inc: { productQuantity: 1 } }; 
-            await assetsCollection.updateOne(assetQuery, updateAssetDoc);
-        }
-    }
-
-    res.send(result);
-});
+  }
+  const result = await assetsCollection.updateOne(filter, updatedDoc);
+  res.send(result);
+})
 
 //Get available assets
 app.get('/assets-available', verifyToken, async (req, res) => { 
@@ -251,23 +210,6 @@ app.get('/requests', verifyToken, async (req, res) => {
     res.send({ result, count });
 });
 
-app.get('/requests', verifyToken, async (req, res) => {
-    await connectDB();
-    const email = req.query.email;
-    const page = parseInt(req.query.page) || 0;
-    const size = parseInt(req.query.size) || 10;
-    let query = {};
-    if (email) {
-        query = { hrEmail: email };
-    }
-    const result = await requestsCollection.find(query)
-        .skip(page * size)
-        .limit(size)
-        .toArray();
-    const count = await requestsCollection.countDocuments(query);
-    res.send({ result, count });
-});
-
 //Get my rqst
 app.get('/my-requested-assets', verifyToken, async (req, res) => {
     await connectDB();
@@ -278,6 +220,7 @@ app.get('/my-requested-assets', verifyToken, async (req, res) => {
     const query = { requesterEmail: email };
 
     const result = await requestsCollection.find(query)
+        .sort({ _id: -1 })
         .skip(page * size)
         .limit(size)
         .toArray();
@@ -306,15 +249,6 @@ app.post('/requests', verifyToken, async (req, res) => {
         return res.status(400).send({ message: 'Asset is not available.' });
     }
     
-    const existingRequest = await requestsCollection.findOne({
-        assetId: requestInfo.assetId,
-        requesterEmail: requestInfo.requesterEmail,
-        status: 'pending'
-    });
-    if (existingRequest) {
-        return res.status(400).send({ message: 'You already have a pending request for this asset.' });
-    }
-    
     const result = await requestsCollection.insertOne(requestInfo);
     res.send(result);
 });
@@ -324,7 +258,6 @@ app.patch('/requests/:id', verifyToken, async (req, res) => {
     await connectDB();
     const id = req.params.id;
     const { status, assetId, requesterEmail, hrEmail } = req.body;
-
     
     const requesterUser = await usersCollection.findOne({ email: requesterEmail });
     const hrUser = await usersCollection.findOne({ email: hrEmail });
@@ -333,11 +266,11 @@ app.patch('/requests/:id', verifyToken, async (req, res) => {
         return res.status(404).send({ message: "User not found" });
     }
 
-   
     const isNewEmployee = requesterUser.hrEmail !== hrEmail;
 
     if (status === 'approved' && isNewEmployee) {
-        const currentEmps = hrUser.currentEmployees || 0;
+        const currentEmps = await usersCollection.countDocuments({ hrEmail: hrEmail, role: 'employee' });
+        
         let limit = 5; 
         if (hrUser.packageLimit !== undefined) {
             limit = hrUser.packageLimit;
@@ -346,12 +279,12 @@ app.patch('/requests/:id', verifyToken, async (req, res) => {
             return res.send({ message: "limit_reached" });
         }
     }
+    
     const query = { _id: new ObjectId(id) };
     const updateDoc = { $set: { status: status } };
     const result = await requestsCollection.updateOne(query, updateDoc);
     if (result.modifiedCount > 0) {
         
-  
         if (status === 'approved') {
             const assetQuery = { _id: new ObjectId(assetId) };
             const updateAssetDoc = { $inc: { productQuantity: -1 } }; 
@@ -370,7 +303,6 @@ app.patch('/requests/:id', verifyToken, async (req, res) => {
                 await usersCollection.updateOne({ email: hrEmail }, { $inc: { currentEmployees: 1 } });
             }
         }
-
         
         if (status === 'returned') {
             const assetQuery = { _id: new ObjectId(assetId) };
@@ -440,8 +372,6 @@ app.patch('/users/remove/:id', verifyToken, async (req, res) => {
 app.post('/create-payment-intent', verifyToken, async (req, res) => {
     const { price } = req.body;
     const amount = parseInt(price * 100);
-
-    console.log(amount, 'amount inside the intent')
 
     const paymentIntent = await stripe.paymentIntents.create({
         amount: amount,
@@ -555,30 +485,6 @@ app.get('/employee-monthly-requests', verifyToken, async (req, res) => {
         return (reqDate.getMonth() + 1) === currentMonth;
     });
     res.send(monthlyRequests.slice(0, 5));
-});
-//Pagiantion for asset
-app.get('/assets', verifyToken, async (req, res) => {
-    await connectDB();
-    const email = req.query.email;
-    const search = req.query.search || "";
-    const filter = req.query.filter || "";
-    const page = parseInt(req.query.page) || 0;
-    const size = parseInt(req.query.size) || 10;
-
-    let query = {
-        hrEmail: email,
-        productName: { $regex: search, $options: 'i' }
-    };
-
-    if (filter) {
-        query.productType = filter;
-    }
-    const result = await assetsCollection.find(query)
-        .skip(page * size)
-        .limit(size)
-        .toArray();
-    const count = await assetsCollection.countDocuments(query);
-    res.send({ result, count });
 });
 
 //pie charts
