@@ -402,14 +402,21 @@ app.post('/payments', verifyToken, async (req, res) => {
 });
 
 //Profile pic updated
-app.put('/users/:email', verifyToken, async (req, res) => {
-    await connectDB();
+app.put('/users/:email', async (req, res) => {
     const email = req.params.email;
-    const updateData = req.body;
-
     const filter = { email: email };
+    const user = req.body;
+    
+   
     const updateDoc = {
-        $set: updateData
+        $set: {
+            name: user.name,
+            photoURL: user.photoURL,
+            ...(user.dateOfBirth && { dateOfBirth: user.dateOfBirth }),
+            
+            ...(user.companyName && { companyName: user.companyName }),
+            ...(user.companyLogo && { companyLogo: user.companyLogo }),
+        }
     };
 
     const result = await usersCollection.updateOne(filter, updateDoc);
