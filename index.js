@@ -11,7 +11,7 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.tk04nnw.mongodb.net/?appName=Cluster0`;
+const uri = process.env.MONGODB_URI || `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.tk04nnw.mongodb.net/?appName=Cluster0`;
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 const client = new MongoClient(uri, {
@@ -29,7 +29,8 @@ let assetsCollection;
 let requestsCollection;
 
 async function connectDB() {
-  if (db) return;
+  if (db) return db;
+
   try {
     await client.connect();
     db = client.db("assetVerse");
@@ -37,8 +38,10 @@ async function connectDB() {
     assetsCollection = db.collection("assets");
     requestsCollection = db.collection("requests");
     console.log("Connected to MongoDB");
+    return db;
   } catch (error) {
     console.error("MongoDB Connection Error:", error);
+    throw new Error(`Database unavailable: ${error.message}`);
   }
 }
 
@@ -539,6 +542,16 @@ app.get('/hr-top-requests', verifyToken, async (req, res) => {
     }));
 
     res.send(formattedData);
+});
+
+app.use((error, req, res, next) => {
+  console.error('Unhandled server error:', error);
+
+  if (error.message && error.message.includes('Database unavailable')) {
+    return res.status(503).json({ message: 'Database unavailable. Please check MongoDB connection.' });
+  }
+
+  res.status(500).json({ message: 'Internal server error' });
 });
 
 // Start Server
