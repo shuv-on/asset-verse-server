@@ -146,6 +146,16 @@ app.get('/assets', verifyToken, async (req, res) => {
     res.send({ result, count });
 });
 
+// Get asset by id
+app.get('/assets/:id', verifyToken, async (req, res) => {
+    await connectDB();
+    const result = await assetsCollection.findOne({ _id: new ObjectId(req.params.id) });
+    if (!result) {
+        return res.status(404).send({ message: 'Asset not found' });
+    }
+    res.send(result);
+});
+
 //Update asset
 app.patch('/assets/:id', verifyToken, async(req, res) =>{
   await connectDB();
@@ -261,15 +271,18 @@ app.patch('/requests/:id', verifyToken, async (req, res) => {
     await connectDB();
     const id = req.params.id;
     const { status, assetId, requesterEmail, hrEmail } = req.body;
-    
-    const requesterUser = await usersCollection.findOne({ email: requesterEmail });
-    const hrUser = await usersCollection.findOne({ email: hrEmail });
 
-    if (!hrUser || !requesterUser) {
-        return res.status(404).send({ message: "User not found" });
+    let requesterUser;
+    let hrUser;
+    let isNewEmployee = false;
+    if (status === 'approved') {
+        requesterUser = await usersCollection.findOne({ email: requesterEmail });
+        hrUser = await usersCollection.findOne({ email: hrEmail });
+        if (!hrUser || !requesterUser) {
+            return res.status(404).send({ message: "User not found" });
+        }
+        isNewEmployee = requesterUser.hrEmail !== hrEmail;
     }
-
-    const isNewEmployee = requesterUser.hrEmail !== hrEmail;
 
     if (status === 'approved' && isNewEmployee) {
         const currentEmps = await usersCollection.countDocuments({ hrEmail: hrEmail, role: 'employee' });
